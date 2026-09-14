@@ -1,168 +1,233 @@
 package com.app_rickmorty.ui.screens
 
+
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.app_rickmorty.data.model.RickCharacter
-import com.app_rickmorty.ui.theme.DangerAmber
-import com.app_rickmorty.ui.theme.MultiverseLavender
-import com.app_rickmorty.ui.theme.PortalBlack
-import com.app_rickmorty.ui.theme.PortalGreen
-import com.app_rickmorty.ui.theme.TextSecondary
-
-
-
+import com.app_rickmorty.data.model.CharacterUi
+import com.app_rickmorty.ui.theme.*
 
 @Composable
-fun CharacterScreen(
-    characters: List<RickCharacter>,
-    onCharacterClick: (RickCharacter) -> Unit = {}
+fun CharacterDetailScreen(
+    character: CharacterUi,
+    onBack: () -> Unit,
+    onAddToFavorites: () -> Unit,
+    selectedTab: Int = 0
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PortalBlack)
-            .padding(horizontal = 20.dp)
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Portal Explorer",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(vertical = 4.dp)
+    Scaffold(containerColor = SpaceBlack) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SpaceBlack)
+                .padding(padding)
+                .padding(horizontal = 20.dp)
         ) {
-            items(characters) { character ->
-                CharacterCard(
-                    character = character,
-                    onClick = { onCharacterClick(character) }
-                )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Top bar: back + badge de dimensión
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(PanelDark),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(PanelDark)
+                        .border(BorderStroke(1.dp, NeonGreen.copy(alpha = 0.6f)), RoundedCornerShape(50))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = character.dimension,
+                        color = NeonGreen,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
             }
-        }
-    }
-}
 
-// ---------- CARD DE PERSONAJE ----------
-@Composable
-fun CharacterCard(
-    character: RickCharacter,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column {
+            Spacer(modifier = Modifier.height(20.dp))
 
-            AsyncImage(
-                model = character.image,
-                contentDescription = character.name,
+            // Retrato circular con glow
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp),
-                contentScale = ContentScale.Crop
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(220.dp)
+                        .background(PortalGlowBrush, CircleShape)
+                        .border(BorderStroke(3.dp, NeonGreen), CircleShape)
+                        .padding(6.dp)
+                        .clip(CircleShape)
+                        .background(PanelDarkAlt)
+                ) {
+                    AsyncImage(
+                        model = character.imageUrl,
+                        contentDescription = character.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = character.name.uppercase(),
+                color = NeonGreen,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "${character.role} • ID: ${character.idLabel}",
+                color = PurpleAccent,
+                fontSize = 12.sp,
+                letterSpacing = 0.5.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Column(modifier = Modifier.padding(12.dp)) {
+            Spacer(modifier = Modifier.height(20.dp))
 
-                Text(
-                    text = character.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = character.species.uppercase(),
-                    style = MaterialTheme.typography.labelMedium
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // La API de Rick and Morty devuelve status en inglés: "Alive", "Dead", "unknown"
-                val statusColor = when (character.status) {
-                    "Alive" -> PortalGreen
-                    "Dead" -> DangerAmber
-                    else -> TextSecondary
-                }
-                val statusText = when (character.status) {
-                    "Alive" -> "Vivo"
-                    "Dead" -> "Muerto"
-                    else -> "Desconocido"
-                }
-
+            // Tarjeta de información con borde ámbar
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(PanelDark)
+                    .border(BorderStroke(1.dp, DangerOrange.copy(alpha = 0.5f)), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(statusColor)
+                    Icon(
+                        Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = DangerOrange,
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = statusColor
+                        text = "CLASIFICACIÓN: ${character.classification}",
+                        color = DangerOrange,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = MaterialTheme.colorScheme.outline)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+                InfoRow(label = "STATUS") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (character.isAlive) StatusGreen else Color.Red)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (character.isAlive) "ALIVE" else "DECEASED",
+                            color = StatusGreen,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
 
-                Text(text = "ORIGEN:", style = MaterialTheme.typography.labelMedium)
+                InfoRow(label = "SPECIES") {
+                    Text(character.species, color = PurpleAccent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                }
+                HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
+
+                InfoRow(label = "ORIGIN") {
+                    Text(character.origin, color = PurpleAccent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                }
+                HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
+
+                InfoRow(label = "FIRST EPISODE") {
+                    Text(character.firstEpisode, color = PurpleAccent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = character.origin.name,
-                    style = MaterialTheme.typography.bodySmall.copy(color = MultiverseLavender),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = character.description,
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
                 )
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            OutlinedButton(
+                onClick = onAddToFavorites,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(26.dp),
+                border = BorderStroke(1.dp, PurpleAccent),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = PurpleAccent)
+            ) {
+                Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "ADD TO FAVORITES", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-fun AsyncImage(
-    model: Int,
-    contentDescription: String,
-    modifier: Modifier,
-    contentScale: ContentScale
-) {
-    TODO("Not yet implemented")
+private fun InfoRow(label: String, value: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, color = TextSecondary, fontSize = 12.sp, letterSpacing = 0.5.sp)
+        value()
+    }
 }

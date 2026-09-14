@@ -17,6 +17,8 @@ val StatusYellow = Color(0xFFF5C518)
 val TextPrimary = Color(0xFFF5F5F5)
 val TextSecondary = Color(0xFFA0A4AE)
 val BorderSubtle = Color(0xFF2A2D36)
+val PurpleAccent = Color(0xFFD68FFF)
+val DangerOrange = Color(0xFFF5A623)
 
 // Fondo estilo "espacio" para welcome-screen
 val SpaceBackgroundBrush = Brush.verticalGradient(

@@ -4,6 +4,7 @@ package com.app_rickmorty.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -18,32 +19,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.app_rickmorty.data.model.CharacterUi
+import com.app_rickmorty.ui.viewmodel.CharactersUiState
 import com.app_rickmorty.ui.theme.*
-
-data class Character(
-    val name: String,
-    val species: String,
-    val isAlive: Boolean,
-    val firstAppearance: String,
-    val accentColor: Color = NeonGreen
-)
-
-private val sampleCharacters = listOf(
-    Character("Rick Sanchez", "HUMANO", true, "S01E01 - Pilot", NeonGreen),
-    Character("Evil Morty", "HUMANO", true, "S01E10 - Close...", StatusYellow)
-)
 
 @Composable
 fun PortalExplorerScreen(
+    uiState: CharactersUiState,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
     onFiltrosClick: () -> Unit,
-    characters: List<Character> = sampleCharacters,
-    totalAnomalias: Int = 482,
-    selectedTab: Int = 0
+    selectedTab: Int = 0,
+    onCharacterClick: (CharacterUi) -> Unit = {}
 ) {
     Scaffold(
         containerColor = SpaceBlack,
@@ -102,7 +96,7 @@ fun PortalExplorerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Barra de búsqueda
+            // Barra de búsqueda -> dispara una llamada real a /character?name=
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
@@ -111,6 +105,12 @@ fun PortalExplorerScreen(
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = TextSecondary) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onSearch = { onSearchSubmit() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = PanelDark,
                     unfocusedContainerColor = PanelDark,
@@ -140,31 +140,70 @@ fun PortalExplorerScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Sección "Anomalías Detectadas"
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Anomalías Detectadas",
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Ver todo ($totalAnomalias)",
-                    color = NeonGreen,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            when (uiState) {
+                is CharactersUiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = NeonGreen)
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                is CharactersUiState.Error -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "No se pudo conectar con la API",
+                            color = Color.Red,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = uiState.message,
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
 
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(characters) { character ->
-                    CharacterCard(character = character)
+                is CharactersUiState.Success -> {
+                    val characters = uiState.characters
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Anomalías Detectadas",
+                            color = TextPrimary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "${characters.size} resultados",
+                            color = NeonGreen,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(characters) { character ->
+                            CharacterCard(character = character, onClick = { onCharacterClick(character) })
+                        }
+                    }
                 }
             }
 
@@ -187,10 +226,11 @@ fun PortalExplorerScreen(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatusDot(color = StatusGreen)
+                val isOnline = uiState !is CharactersUiState.Error
+                StatusDot(color = if (isOnline) StatusGreen else Color.Red)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Frecuencia central estable: C-137",
+                    text = if (isOnline) "Conectado a rickandmortyapi.com" else "Sin conexión con la API",
                     color = TextPrimary,
                     fontSize = 13.sp
                 )
@@ -202,15 +242,19 @@ fun PortalExplorerScreen(
 }
 
 @Composable
-private fun CharacterCard(character: Character) {
+private fun CharacterCard(character: CharacterUi, onClick: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .width(170.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(PanelDark)
+            .clickable { onClick() }
     ) {
-        // Imagen del personaje (placeholder de color)
-        Box(
+        // Imagen real del personaje (portrait que trae la API)
+        AsyncImage(
+            model = character.imageUrl,
+            contentDescription = character.name,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(140.dp)
@@ -250,10 +294,11 @@ private fun CharacterCard(character: Character) {
                 letterSpacing = 0.5.sp
             )
             Text(
-                text = character.firstAppearance,
+                text = character.firstEpisode,
                 color = TextPrimary,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 2
             )
         }
     }

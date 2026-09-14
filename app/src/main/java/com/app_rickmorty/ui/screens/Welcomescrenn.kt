@@ -1,7 +1,6 @@
 package com.app_rickmorty.ui.screens
 
 
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
