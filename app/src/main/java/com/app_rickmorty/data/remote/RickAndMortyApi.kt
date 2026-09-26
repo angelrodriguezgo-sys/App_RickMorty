@@ -1,17 +1,16 @@
 package com.app_rickmorty.data.remote
 
 
-import retrofit2.http.Query
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 // ---------------------------------------------------------------------
 // DTOs: representan EXACTAMENTE el JSON que devuelve rickandmortyapi.com
 // ---------------------------------------------------------------------
 
-/** Respuesta de GET https://rickandmortyapi.com/api/character */
 data class CharacterListResponseDto(
     val info: InfoDto,
     val results: List<CharacterDto>
@@ -27,14 +26,14 @@ data class InfoDto(
 data class CharacterDto(
     val id: Int,
     val name: String,
-    val status: String,   // "Alive" | "Dead" | "unknown"
+    val status: String,
     val species: String,
     val type: String,
     val gender: String,
     val origin: NamedResourceDto,
     val location: NamedResourceDto,
     val image: String,
-    val episode: List<String>, // URLs de episodios en los que aparece
+    val episode: List<String>,
     val url: String,
     val created: String
 )
@@ -50,10 +49,14 @@ data class NamedResourceDto(
 
 interface RickAndMortyApi {
 
-    // https://rickandmortyapi.com/api/character?page=1
+    // https://rickandmortyapi.com/api/character?page=1&name=...&status=...&species=...&gender=...
     @GET("character")
     suspend fun getCharacters(
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("name") name: String? = null,
+        @Query("status") status: String? = null,
+        @Query("species") species: String? = null,
+        @Query("gender") gender: String? = null
     ): CharacterListResponseDto
 
     // https://rickandmortyapi.com/api/character/1
@@ -61,12 +64,6 @@ interface RickAndMortyApi {
     suspend fun getCharacterById(
         @Path("id") id: Int
     ): CharacterDto
-
-    // https://rickandmortyapi.com/api/character/?name=rick
-    @GET("character")
-    suspend fun searchCharactersByName(
-        @Query("name") name: String
-    ): CharacterListResponseDto
 }
 
 object RetrofitClient {

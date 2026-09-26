@@ -1,6 +1,5 @@
 package com.app_rickmorty.ui.screens
 
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,8 +29,9 @@ import com.app_rickmorty.ui.theme.*
 @Composable
 fun CharacterDetailScreen(
     character: CharacterUi,
+    isFavorite: Boolean,
     onBack: () -> Unit,
-    onAddToFavorites: () -> Unit,
+    onToggleFavorite: () -> Unit,
     selectedTab: Int = 0
 ) {
     Scaffold(containerColor = SpaceBlack) { padding ->
@@ -43,17 +44,13 @@ fun CharacterDetailScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Top bar: back + badge de dimensión
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(PanelDark),
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(PanelDark),
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(onClick = onBack) {
@@ -68,25 +65,13 @@ fun CharacterDetailScreen(
                         .border(BorderStroke(1.dp, NeonGreen.copy(alpha = 0.6f)), RoundedCornerShape(50))
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    Text(
-                        text = character.dimension,
-                        color = NeonGreen,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp
-                    )
+                    Text(text = character.dimension, color = NeonGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Retrato circular con glow
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
                         .size(220.dp)
@@ -100,9 +85,7 @@ fun CharacterDetailScreen(
                         model = character.imageUrl,
                         contentDescription = character.name,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
+                        modifier = Modifier.fillMaxSize().clip(CircleShape)
                     )
                 }
             }
@@ -128,7 +111,6 @@ fun CharacterDetailScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Tarjeta de información con borde ámbar
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -138,12 +120,7 @@ fun CharacterDetailScreen(
                     .padding(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = DangerOrange,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Filled.Warning, contentDescription = null, tint = DangerOrange, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "CLASIFICACIÓN: ${character.classification}",
@@ -157,19 +134,9 @@ fun CharacterDetailScreen(
                 Spacer(modifier = Modifier.height(14.dp))
                 InfoRow(label = "STATUS") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (character.isAlive) StatusGreen else Color.Red)
-                        )
+                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (character.isAlive) StatusGreen else Color.Red))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (character.isAlive) "ALIVE" else "DECEASED",
-                            color = StatusGreen,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text(text = if (character.isAlive) "ALIVE" else "DECEASED", color = StatusGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
@@ -189,28 +156,29 @@ fun CharacterDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = character.description,
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp
-                )
+                Text(text = character.description, color = TextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedButton(
-                onClick = onAddToFavorites,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                onClick = onToggleFavorite,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(26.dp),
-                border = BorderStroke(1.dp, PurpleAccent),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = PurpleAccent)
+                border = BorderStroke(1.dp, if (isFavorite) NeonGreen else PurpleAccent),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isFavorite) NeonGreen else PurpleAccent)
             ) {
-                Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "ADD TO FAVORITES", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(
+                    text = if (isFavorite) "AGREGADO A FAVORITOS" else "ADD TO FAVORITES",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -221,9 +189,7 @@ fun CharacterDetailScreen(
 @Composable
 private fun InfoRow(label: String, value: @Composable () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
