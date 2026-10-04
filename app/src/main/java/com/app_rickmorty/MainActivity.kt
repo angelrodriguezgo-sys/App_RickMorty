@@ -21,14 +21,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app_rickmorty.data.local.AppPreferences
 import com.app_rickmorty.data.model.CharacterUi
+import com.app_rickmorty.ui.screens.AuthViewModel
 import com.app_rickmorty.ui.screens.CharacterDetailScreen
 import com.app_rickmorty.ui.screens.FavoritesScreen
 import com.app_rickmorty.ui.screens.FilterDialog
+import com.app_rickmorty.ui.screens.LoginScreen
 import com.app_rickmorty.ui.screens.MultiverseScreen
 import com.app_rickmorty.ui.screens.PortalExplorerScreen
 import com.app_rickmorty.ui.screens.ProfileScreen
+import com.app_rickmorty.ui.screens.RegisterScreen
 import com.app_rickmorty.ui.screens.WelcomeScreen
 import com.app_rickmorty.ui.theme.App_RickMortyTheme
+
 import com.app_rickmorty.ui.viewmodel.CharacterViewModel
 import com.app_rickmorty.ui.viewmodel.ProfileViewModel
 
@@ -50,7 +54,7 @@ class MainActivity : ComponentActivity() {
  * Navegación simple sin dependencia de Navigation-Compose:
  * un estado que decide qué pantalla se dibuja.
  */
-private enum class AppScreen { WELCOME, PORTAL, MULTIVERSE, FAVORITES, PROFILE, DETAIL }
+private enum class AppScreen { LOGIN, REGISTER, WELCOME, PORTAL, MULTIVERSE, FAVORITES, PROFILE, DETAIL }
 
 private fun screenForTab(tab: Int): AppScreen = when (tab) {
     0 -> AppScreen.PORTAL
@@ -81,8 +85,12 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
 
     val viewModel: CharacterViewModel = viewModel(factory = factory)
     val profileViewModel: ProfileViewModel = viewModel(factory = factory)
+    val authViewModel: AuthViewModel = viewModel()
 
-    var currentScreen by remember { mutableStateOf(AppScreen.WELCOME) }
+    // Si ya hay sesión de Firebase activa, nos saltamos el login al abrir la app.
+    var currentScreen by remember {
+        mutableStateOf(if (authViewModel.isLoggedIn) AppScreen.WELCOME else AppScreen.LOGIN)
+    }
     var selectedTab by remember { mutableStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCharacter by remember { mutableStateOf<CharacterUi?>(null) }
@@ -109,6 +117,25 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
     }
 
     when (currentScreen) {
+        AppScreen.LOGIN -> LoginScreen(
+            viewModel = authViewModel,
+            onLoginSuccess = {
+                // Carga el perfil (usuario, dimensión, tierra, foto) de ESTA cuenta.
+                profileViewModel.loadProfile()
+                currentScreen = AppScreen.WELCOME
+            },
+            onGoToRegister = { currentScreen = AppScreen.REGISTER }
+        )
+
+        AppScreen.REGISTER -> RegisterScreen(
+            viewModel = authViewModel,
+            onRegisterSuccess = {
+                profileViewModel.loadProfile()
+                currentScreen = AppScreen.WELCOME
+            },
+            onBackToLogin = { currentScreen = AppScreen.LOGIN }
+        )
+
         AppScreen.WELCOME -> WelcomeScreen(
             onIniciar = {
                 selectedTab = 0
@@ -172,6 +199,15 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
             state = profileState,
             onSaveUsername = { profileViewModel.saveUsername(it) },
             onRegenerate = { profileViewModel.regenerateCoordinates() },
+            onPhotoSelected = { base64 -> profileViewModel.updateProfilePhoto(base64) },
+            onLogout = {
+                // Cierra sesión y borra el estado en memoria para no arrastrar
+                // datos de esta cuenta al perfil de la siguiente que inicie sesión.
+                profileViewModel.clearOnLogout()
+                authViewModel.logout()
+                selectedTab = 0
+                currentScreen = AppScreen.LOGIN
+            },
             selectedTab = selectedTab,
             onTabSelected = goToTab
         )
