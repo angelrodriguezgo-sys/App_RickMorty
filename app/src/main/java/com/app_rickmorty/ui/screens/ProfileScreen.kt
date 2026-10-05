@@ -10,10 +10,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -32,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app_rickmorty.data.local.ImageUtils
@@ -45,12 +50,13 @@ fun ProfileScreen(
     onSaveUsername: (String) -> Unit,
     onRegenerate: () -> Unit,
     onPhotoSelected: (String) -> Unit,
+    onRemovePhoto: () -> Unit,
+    onDismissError: () -> Unit,
     onLogout: () -> Unit,
     selectedTab: Int,
     onTabSelected: (Int) -> Unit
 ) {
     var usernameField by remember(state.username) { mutableStateOf(state.username) }
-    var justSaved by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -70,27 +76,55 @@ fun ProfileScreen(
         containerColor = SpaceBlack,
         bottomBar = { PortalBottomBar(selectedTab = selectedTab, onTabSelected = onTabSelected) }
     ) { padding ->
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(SpaceBlack)
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = NeonGreen)
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SpaceBlack)
                 .padding(padding)
                 .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("CITADEL ID", color = NeonGreen, fontSize = 11.sp, letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold)
             Text("Perfil", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (state.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center
+            if (state.errorMessage != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Red.copy(alpha = 0.12f))
+                        .border(BorderStroke(1.dp, Color.Red.copy(alpha = 0.4f)), RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator(color = NeonGreen)
+                    Text(
+                        text = state.errorMessage,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDismissError, modifier = Modifier.size(22.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = Color.Red)
+                    }
                 }
-                return@Column
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Avatar: toca la foto para cambiarla (se sube y se guarda en Firestore)
@@ -117,9 +151,7 @@ fun ProfileScreen(
                         Image(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = "Foto de perfil",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
                     } else {
                         Icon(Icons.Filled.Person, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(44.dp))
@@ -137,6 +169,7 @@ fun ProfileScreen(
                         }
                     }
 
+                    // Botón para cambiar la foto (siempre visible)
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -152,16 +185,39 @@ fun ProfileScreen(
                             modifier = Modifier.size(14.dp)
                         )
                     }
+
+                    // Botón para eliminar la foto (solo aparece si ya hay una)
+                    if (state.photoBase64.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(Color.Red)
+                                .clickable(enabled = !state.isUploadingPhoto) { onRemovePhoto() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Eliminar foto",
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Toca la foto para cambiarla",
+                text = if (state.photoBase64.isNotBlank())
+                    "Toca la foto para cambiarla, o el ícono rojo para eliminarla"
+                else
+                    "Toca el ícono de cámara para agregar una foto",
                 color = TextSecondary,
                 fontSize = 11.sp,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
             if (state.email.isNotBlank()) {
                 Text(
@@ -169,7 +225,7 @@ fun ProfileScreen(
                     color = TextSecondary,
                     fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
             }
 
@@ -183,40 +239,47 @@ fun ProfileScreen(
                     .border(BorderStroke(1.dp, BorderSubtle), RoundedCornerShape(16.dp))
                     .padding(16.dp)
             ) {
-                Text("NOMBRE DE USUARIO", color = TextSecondary, fontSize = 11.sp, letterSpacing = 0.5.sp)
+                Text("NOMBRE DE USUARIO (ALIAS)", color = TextSecondary, fontSize = 11.sp, letterSpacing = 0.5.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = usernameField,
-                    onValueChange = {
-                        usernameField = it
-                        justSaved = false
-                    },
+                    onValueChange = { usernameField = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Ej: RickC137", color = TextSecondary) },
                     singleLine = true,
+                    enabled = !state.isSavingUsername,
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = PanelDarkAlt,
                         unfocusedContainerColor = PanelDarkAlt,
+                        disabledContainerColor = PanelDarkAlt,
                         focusedBorderColor = NeonGreen,
                         unfocusedBorderColor = BorderSubtle,
                         cursorColor = NeonGreen
                     )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
+                val isSaved = usernameField.isNotBlank() &&
+                        usernameField == state.username &&
+                        !state.isSavingUsername
+
                 Button(
-                    onClick = {
-                        onSaveUsername(usernameField.trim())
-                        justSaved = true
-                    },
+                    onClick = { onSaveUsername(usernameField) },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    enabled = usernameField.isNotBlank(),
+                    enabled = usernameField.isNotBlank() && !state.isSavingUsername,
                     shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = SpaceBlack)
                 ) {
-                    Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (justSaved) "GUARDADO ✓" else "GUARDAR NOMBRE", fontWeight = FontWeight.Bold)
+                    if (state.isSavingUsername) {
+                        CircularProgressIndicator(color = SpaceBlack, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("GUARDANDO...", fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (isSaved) "GUARDADO ✓" else "GUARDAR NOMBRE", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -241,13 +304,20 @@ fun ProfileScreen(
                 OutlinedButton(
                     onClick = onRegenerate,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
+                    enabled = !state.isSavingCoordinates,
                     shape = RoundedCornerShape(24.dp),
                     border = BorderStroke(1.dp, PurpleAccent),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = PurpleAccent)
                 ) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("GENERAR NUEVAS COORDENADAS", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    if (state.isSavingCoordinates) {
+                        CircularProgressIndicator(color = PurpleAccent, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("GENERANDO...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    } else {
+                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("GENERAR NUEVAS COORDENADAS", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
 

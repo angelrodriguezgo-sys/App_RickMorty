@@ -41,4 +41,8 @@ class UserRepository(
     suspend fun updatePhoto(uid: String, base64Photo: String) {
         userDoc(uid).update("photoBase64", base64Photo).await()
     }
+
+    suspend fun removePhoto(uid: String) {
+        updatePhoto(uid, "")
+    }
 }
