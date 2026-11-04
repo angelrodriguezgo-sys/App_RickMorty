@@ -201,7 +201,7 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
             onRegenerate = { profileViewModel.regenerateCoordinates() },
             onPhotoSelected = { base64 -> profileViewModel.updateProfilePhoto(base64) },
             onRemovePhoto = { profileViewModel.removeProfilePhoto() },
-            onDismissError = { profileViewModel.dimissError() },
+            onDismissError = { profileViewModel.dismissError() },
             onLogout = {
                 // Cierra sesión y borra el estado en memoria para no arrastrar
                 // datos de esta cuenta al perfil de la siguiente que inicie sesión.
