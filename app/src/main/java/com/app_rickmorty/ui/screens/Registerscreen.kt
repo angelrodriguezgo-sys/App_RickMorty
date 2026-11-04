@@ -168,6 +168,26 @@ fun RegisterScreen(
                     Text("CREAR CUENTA", fontWeight = FontWeight.Bold)
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val privacyUrl = "https://sites.google.com/view/poltica-de-privacidad-rick-and/p%C3%A1gina-principal"
+            TextButton(
+                onClick = {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(privacyUrl))
+                        context.startActivity(intent)
+                    } catch (_: Exception) {}
+                }
+            ) {
+                Text(
+                    text = "Al registrarte aceptas nuestra Política de Privacidad",
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

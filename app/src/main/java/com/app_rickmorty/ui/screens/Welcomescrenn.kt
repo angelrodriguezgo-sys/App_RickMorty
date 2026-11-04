@@ -122,6 +122,21 @@ fun WelcomeScreen(
                 Text(text = "Configuración", fontWeight = FontWeight.Medium)
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val privacyUrl = "https://sites.google.com/view/poltica-de-privacidad-rick-and/p%C3%A1gina-principal"
+            TextButton(
+                onClick = {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(privacyUrl))
+                        context.startActivity(intent)
+                    } catch (_: Exception) {}
+                }
+            ) {
+                Text(text = "Política de Privacidad", color = TextSecondary, fontSize = 11.sp)
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
