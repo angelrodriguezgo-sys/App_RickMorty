@@ -33,6 +33,10 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) {
+        viewModel.resetError()
+    }
+
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) onLoginSuccess()
     }

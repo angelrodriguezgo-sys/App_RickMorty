@@ -112,7 +112,7 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
         FilterDialog(
             currentFilters = filters,
             onDismiss = { showFilterDialog = false },
-            onApply = { viewModel.applyFilters(it) }
+            onApply = { newFilters -> viewModel.applyFilters(newFilters, currentSearchText = searchQuery) }
         )
     }
 
@@ -120,20 +120,28 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
         AppScreen.LOGIN -> LoginScreen(
             viewModel = authViewModel,
             onLoginSuccess = {
-                // Carga el perfil (usuario, dimensión, tierra, foto) de ESTA cuenta.
+                // Carga el perfil (usuario, dimensión, tierra, foto) y favoritos de ESTA cuenta.
                 profileViewModel.loadProfile()
+                viewModel.loadUserFavorites()
                 currentScreen = AppScreen.WELCOME
             },
-            onGoToRegister = { currentScreen = AppScreen.REGISTER }
+            onGoToRegister = {
+                authViewModel.resetError()
+                currentScreen = AppScreen.REGISTER
+            }
         )
 
         AppScreen.REGISTER -> RegisterScreen(
             viewModel = authViewModel,
             onRegisterSuccess = {
                 profileViewModel.loadProfile()
+                viewModel.loadUserFavorites()
                 currentScreen = AppScreen.WELCOME
             },
-            onBackToLogin = { currentScreen = AppScreen.LOGIN }
+            onBackToLogin = {
+                authViewModel.resetError()
+                currentScreen = AppScreen.LOGIN
+            }
         )
 
         AppScreen.WELCOME -> WelcomeScreen(
@@ -204,8 +212,9 @@ private fun RickMortyApp(modifier: Modifier = Modifier) {
             onDismissError = { profileViewModel.dismissError() },
             onLogout = {
                 // Cierra sesión y borra el estado en memoria para no arrastrar
-                // datos de esta cuenta al perfil de la siguiente que inicie sesión.
+                // datos de esta cuenta al perfil ni a los favoritos de la siguiente que inicie sesión.
                 profileViewModel.clearOnLogout()
+                viewModel.clearOnLogout()
                 authViewModel.logout()
                 selectedTab = 0
                 currentScreen = AppScreen.LOGIN

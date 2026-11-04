@@ -16,14 +16,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.app_rickmorty.data.local.ImageUtils
 import com.app_rickmorty.ui.theme.*
 import com.app_rickmorty.ui.viewmodel.ProfileUiState
@@ -57,9 +60,18 @@ fun ProfileScreen(
     onTabSelected: (Int) -> Unit
 ) {
     var usernameField by remember(state.username) { mutableStateOf(state.username) }
+    var isEditingUsername by remember { mutableStateOf(false) }
+    var showPhotoOptionsDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(state.username, state.isSavingUsername) {
+        if (!state.isSavingUsername) {
+            usernameField = state.username
+            isEditingUsername = false
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -68,6 +80,71 @@ fun ProfileScreen(
             scope.launch {
                 val base64 = ImageUtils.uriToBase64(context, uri)
                 if (base64 != null) onPhotoSelected(base64)
+            }
+        }
+    }
+
+    // Diálogo de opciones cuando el usuario ya tiene foto (Cambiar o Eliminar)
+    if (showPhotoOptionsDialog) {
+        Dialog(onDismissRequest = { showPhotoOptionsDialog = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(PanelDark)
+                    .border(BorderStroke(1.dp, BorderSubtle), RoundedCornerShape(20.dp))
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Foto de Perfil",
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        showPhotoOptionsDialog = false
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = SpaceBlack)
+                ) {
+                    Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Cambiar foto", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        showPhotoOptionsDialog = false
+                        onRemovePhoto()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.6f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Eliminar foto", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                TextButton(
+                    onClick = { showPhotoOptionsDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancelar", color = TextSecondary)
+                }
             }
         }
     }
@@ -127,18 +204,24 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Avatar: toca la foto para cambiarla (se sube y se guarda en Firestore)
+            // Avatar: Si ya hay foto abre el selector (Editar/Eliminar), si no hay abre la galería directamente
+            val onAvatarClick = {
+                if (state.photoBase64.isNotBlank()) {
+                    showPhotoOptionsDialog = true
+                } else {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                }
+            }
+
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
                         .size(96.dp)
                         .background(PortalGlowBrush, CircleShape)
                         .border(BorderStroke(2.dp, NeonGreen), CircleShape)
-                        .clickable {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
+                        .clickable { onAvatarClick() },
                     contentAlignment = Alignment.Center
                 ) {
                     val bitmap = remember(state.photoBase64) {
@@ -169,7 +252,7 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Botón para cambiar la foto (siempre visible)
+                    // Único botón flotante de camarita elegante en la esquina inferior derecha
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -180,30 +263,10 @@ fun ProfileScreen(
                     ) {
                         Icon(
                             Icons.Filled.CameraAlt,
-                            contentDescription = "Cambiar foto",
+                            contentDescription = "Foto de perfil",
                             tint = SpaceBlack,
                             modifier = Modifier.size(14.dp)
                         )
-                    }
-
-                    // Botón para eliminar la foto (solo aparece si ya hay una)
-                    if (state.photoBase64.isNotBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color.Red)
-                                .clickable(enabled = !state.isUploadingPhoto) { onRemovePhoto() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = "Eliminar foto",
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
                     }
                 }
             }
@@ -211,9 +274,9 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = if (state.photoBase64.isNotBlank())
-                    "Toca la foto para cambiarla, o el ícono rojo para eliminarla"
+                    "Toca la foto para modificarla o eliminarla"
                 else
-                    "Toca el ícono de cámara para agregar una foto",
+                    "Toca la camarita para agregar una foto",
                 color = TextSecondary,
                 fontSize = 11.sp,
                 modifier = Modifier.fillMaxWidth(),
@@ -231,6 +294,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Tarjeta de Nombre de Usuario (Alias) con botón elegante de edición
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -239,46 +303,95 @@ fun ProfileScreen(
                     .border(BorderStroke(1.dp, BorderSubtle), RoundedCornerShape(16.dp))
                     .padding(16.dp)
             ) {
-                Text("NOMBRE DE USUARIO (ALIAS)", color = TextSecondary, fontSize = 11.sp, letterSpacing = 0.5.sp)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = usernameField,
-                    onValueChange = { usernameField = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Ej: RickC137", color = TextSecondary) },
-                    singleLine = true,
-                    enabled = !state.isSavingUsername,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = PanelDarkAlt,
-                        unfocusedContainerColor = PanelDarkAlt,
-                        disabledContainerColor = PanelDarkAlt,
-                        focusedBorderColor = NeonGreen,
-                        unfocusedBorderColor = BorderSubtle,
-                        cursorColor = NeonGreen
+                if (!isEditingUsername) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("NOMBRE DE USUARIO (ALIAS)", color = TextSecondary, fontSize = 11.sp, letterSpacing = 0.5.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = state.username.ifBlank { "Sin alias" },
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Botón pequeño elegante para editar el nombre
+                        IconButton(
+                            onClick = { isEditingUsername = true },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(PanelDarkAlt)
+                                .border(BorderStroke(1.dp, BorderSubtle), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = "Editar nombre",
+                                tint = NeonGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Text("EDITAR NOMBRE DE USUARIO", color = NeonGreen, fontSize = 11.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = usernameField,
+                        onValueChange = { usernameField = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Ej: RickC137", color = TextSecondary) },
+                        singleLine = true,
+                        enabled = !state.isSavingUsername,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = PanelDarkAlt,
+                            unfocusedContainerColor = PanelDarkAlt,
+                            disabledContainerColor = PanelDarkAlt,
+                            focusedBorderColor = NeonGreen,
+                            unfocusedBorderColor = BorderSubtle,
+                            cursorColor = NeonGreen
+                        )
                     )
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                val isSaved = usernameField.isNotBlank() &&
-                        usernameField == state.username &&
-                        !state.isSavingUsername
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                usernameField = state.username
+                                isEditingUsername = false
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            enabled = !state.isSavingUsername,
+                            shape = RoundedCornerShape(22.dp),
+                            border = BorderStroke(1.dp, BorderSubtle),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                        ) {
+                            Text("Cancelar", fontSize = 13.sp)
+                        }
 
-                Button(
-                    onClick = { onSaveUsername(usernameField) },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    enabled = usernameField.isNotBlank() && !state.isSavingUsername,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = SpaceBlack)
-                ) {
-                    if (state.isSavingUsername) {
-                        CircularProgressIndicator(color = SpaceBlack, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("GUARDANDO...", fontWeight = FontWeight.Bold)
-                    } else {
-                        Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isSaved) "GUARDADO ✓" else "GUARDAR NOMBRE", fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { onSaveUsername(usernameField) },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            enabled = usernameField.isNotBlank() && !state.isSavingUsername,
+                            shape = RoundedCornerShape(22.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = SpaceBlack)
+                        ) {
+                            if (state.isSavingUsername) {
+                                CircularProgressIndicator(color = SpaceBlack, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Guardar", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
                     }
                 }
             }
