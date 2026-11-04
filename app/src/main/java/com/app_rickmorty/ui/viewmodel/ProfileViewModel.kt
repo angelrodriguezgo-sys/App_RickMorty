@@ -51,15 +51,23 @@ class ProfileViewModel(
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val defaultUsername = preferences.getUsername().ifBlank { user.email.orEmpty().substringBefore("@") }
+            val defaultDimension = preferences.getDimension() ?: randomDimension()
+            val defaultTierra = preferences.getTierra() ?: randomTierra()
+
             try {
                 val existing = withTimeout(FIRESTORE_TIMEOUT_MS) { userRepository.getProfile(user.uid) }
                 val profile = existing ?: UserProfile(
                     uid = user.uid,
                     email = user.email.orEmpty(),
-                    username = user.email.orEmpty().substringBefore("@"),
-                    dimension = randomDimension(),
-                    tierra = randomTierra()
-                ).also { withTimeout(FIRESTORE_TIMEOUT_MS) { userRepository.saveProfile(it) } }
+                    username = defaultUsername,
+                    dimension = defaultDimension,
+                    tierra = defaultTierra
+                ).also {
+                    try {
+                        withTimeout(FIRESTORE_TIMEOUT_MS) { userRepository.saveProfile(it) }
+                    } catch (_: Exception) {}
+                }
 
                 _uiState.value = ProfileUiState(
                     isLoading = false,
@@ -70,14 +78,22 @@ class ProfileViewModel(
                     photoBase64 = profile.photoBase64
                 )
             } catch (e: TimeoutCancellationException) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.value = ProfileUiState(
                     isLoading = false,
-                    errorMessage = "No hay conexión con el servidor (tardó demasiado). Revisa tu internet e intenta de nuevo."
+                    username = defaultUsername,
+                    dimension = defaultDimension,
+                    tierra = defaultTierra,
+                    email = user.email.orEmpty(),
+                    errorMessage = "Firestore tardó demasiado en responder (modo offline/red lenta). Cargados datos locales."
                 )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.value = ProfileUiState(
                     isLoading = false,
-                    errorMessage = "No se pudo cargar tu perfil: ${e.localizedMessage ?: "revisa tu conexión"}"
+                    username = defaultUsername,
+                    dimension = defaultDimension,
+                    tierra = defaultTierra,
+                    email = user.email.orEmpty(),
+                    errorMessage = "No se pudo sincronizar con Firestore (${e.localizedMessage}). Cargados datos locales."
                 )
             }
         }

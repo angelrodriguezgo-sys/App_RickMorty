@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app_rickmorty.data.local.AppPreferences
 import com.app_rickmorty.data.model.CharacterUi
+import com.app_rickmorty.data.repository.AuthRepository
 import com.app_rickmorty.data.repository.CharacterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,8 +39,12 @@ data class MultiverseUiState(
 
 class CharacterViewModel(
     private val repository: CharacterRepository = CharacterRepository(),
-    private val preferences: AppPreferences? = null
+    private val preferences: AppPreferences? = null,
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
+
+    private val currentUserId: String?
+        get() = authRepository.currentUser?.uid
 
     // ----- Portal Explorer: búsqueda + filtros -----
     private val _uiState = MutableStateFlow<CharactersUiState>(CharactersUiState.Loading)
@@ -53,8 +58,8 @@ class CharacterViewModel(
     // Cache en memoria: evita re-pedir a la API un personaje que ya vimos
     private val characterCache = mutableMapOf<Int, CharacterUi>()
 
-    // ----- Favoritos (persistidos vía AppPreferences) -----
-    private val _favoriteIds = MutableStateFlow(preferences?.getFavoriteIds() ?: emptySet())
+    // ----- Favoritos (persistidos vía AppPreferences aislados por UID) -----
+    private val _favoriteIds = MutableStateFlow(preferences?.getFavoriteIds(currentUserId) ?: emptySet())
     val favoriteIds: StateFlow<Set<Int>> = _favoriteIds.asStateFlow()
 
     private val _favoritesState = MutableStateFlow<CharactersUiState>(CharactersUiState.Loading)
@@ -81,7 +86,10 @@ class CharacterViewModel(
         fetchPortal()
     }
 
-    fun applyFilters(newFilters: CharacterFilters) {
+    fun applyFilters(newFilters: CharacterFilters, currentSearchText: String? = null) {
+        if (currentSearchText != null) {
+            currentQuery = currentSearchText
+        }
         _filters.value = newFilters
         fetchPortal()
     }
@@ -150,6 +158,16 @@ class CharacterViewModel(
 
     // ----- Favoritos -----
 
+    fun loadUserFavorites() {
+        _favoriteIds.value = preferences?.getFavoriteIds(currentUserId) ?: emptySet()
+        refreshFavorites()
+    }
+
+    fun clearOnLogout() {
+        _favoriteIds.value = emptySet()
+        refreshFavorites()
+    }
+
     fun toggleFavorite(character: CharacterUi) {
         characterCache[character.id] = character
         val current = _favoriteIds.value
@@ -159,7 +177,7 @@ class CharacterViewModel(
             current + character.id
         }
         _favoriteIds.value = updated
-        preferences?.saveFavoriteIds(updated)
+        preferences?.saveFavoriteIds(currentUserId, updated)
         refreshFavorites()
     }
 
