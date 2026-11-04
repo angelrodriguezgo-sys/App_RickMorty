@@ -1,6 +1,7 @@
 package com.app_rickmorty.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 
@@ -27,19 +28,19 @@ class UserRepository(
     }
 
     suspend fun saveProfile(profile: UserProfile) {
-        userDoc(profile.uid).set(profile).await()
+        userDoc(profile.uid).set(profile, SetOptions.merge()).await()
     }
 
     suspend fun updateUsername(uid: String, username: String) {
-        userDoc(uid).update("username", username).await()
+        userDoc(uid).set(mapOf("username" to username), SetOptions.merge()).await()
     }
 
     suspend fun updateDimension(uid: String, dimension: String, tierra: String) {
-        userDoc(uid).update(mapOf("dimension" to dimension, "tierra" to tierra)).await()
+        userDoc(uid).set(mapOf("dimension" to dimension, "tierra" to tierra), SetOptions.merge()).await()
     }
 
     suspend fun updatePhoto(uid: String, base64Photo: String) {
-        userDoc(uid).update("photoBase64", base64Photo).await()
+        userDoc(uid).set(mapOf("photoBase64" to base64Photo), SetOptions.merge()).await()
     }
 
     suspend fun removePhoto(uid: String) {

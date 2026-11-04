@@ -18,15 +18,17 @@ class AppPreferences(context: Context) {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    // ----- Favoritos -----
-    fun getFavoriteIds(): Set<Int> {
-        val raw = prefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()
+    // ----- Favoritos (aislados por usuario UID) -----
+    fun getFavoriteIds(userId: String? = null): Set<Int> {
+        val key = if (!userId.isNullOrBlank()) "${KEY_FAVORITES}_$userId" else KEY_FAVORITES
+        val raw = prefs.getStringSet(key, emptySet()) ?: emptySet()
         return raw.mapNotNull { it.toIntOrNull() }.toSet()
     }
 
-    fun saveFavoriteIds(ids: Set<Int>) {
+    fun saveFavoriteIds(userId: String? = null, ids: Set<Int>) {
+        val key = if (!userId.isNullOrBlank()) "${KEY_FAVORITES}_$userId" else KEY_FAVORITES
         prefs.edit()
-            .putStringSet(KEY_FAVORITES, ids.map { it.toString() }.toSet())
+            .putStringSet(key, ids.map { it.toString() }.toSet())
             .apply()
     }
 
