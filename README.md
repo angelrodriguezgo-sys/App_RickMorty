@@ -4,10 +4,10 @@ Aplicación móvil nativa para Android desarrollada en Kotlin con Jetpack Compos
 
 ---
 
-## 🎥 Demostración en Video (Máximo 2 minutos)
+## 🎥 Demostración en Video
 
-> 🎬 **[HAZ CLIC AQUÍ PARA VER EL VIDEO DE DEMOSTRACIÓN](PEGA_AQUI_TU_ENLACE_DE_YOUTUBE_O_DRIVE_O_LOOM)**  
-> *(Reemplaza el enlace de arriba con tu enlace de YouTube, Loom o Google Drive donde grabaste el video de 2 minutos)*
+> 🎬 **[HAZ CLIC AQUÍ PARA VER EL VIDEO DE DEMOSTRACIÓN](https://drive.google.com/drive/folders/17tRUM9Jr5qiN5k8oVYWN2i5m5y6KcLH8)**  
+> 
 
 ---
 
@@ -45,7 +45,7 @@ La Política de Privacidad de la aplicación está publicada y accesible en:
 
 1. Clonar este repositorio:
    ```bash
-   git clone https://github.com/TU_USUARIO/TU_REPOSITORIO.git
+   git clone https://github.com/angelrodriguezgo-sys/App_RickMorty.git
    ```
 2. Abrir el proyecto en **Android Studio**.
 3. Asegurarse de mantener el archivo `app/google-services.json` configurado.
